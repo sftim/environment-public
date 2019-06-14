@@ -1,0 +1,29 @@
+#!/bin/bash -e
+
+# Adapted from https://gist.github.com/abortz/d464c88923c520b79e3d
+
+BRANCH_A="$1"
+BRANCH_B="$2"
+
+# Filter out early commits that are not common ancestors
+# Also helpfully throws an error if there are *no* common ancestors.
+FRONTIER=$(git rev-list --boundary "$BRANCH_A"..."$BRANCH_B" | grep ^- | cut -d- -f2)
+
+# Only happens if branch A == branch B exactly
+if [ -z "$FRONTIER" ]; then
+  echo "$(git rev-parse "$BRANCH_A")"
+  exit 0
+fi
+
+# Find topologically-first cut
+while read rev; do
+  # Check if rev is a cut for both branches
+  [ "$(git rev-list --boundary "$BRANCH_A" "$BRANCH_B" "^$rev" | grep ^-)" == "-$rev" ] || continue
+
+  # Found it!
+  echo "$rev"
+  exit 0
+done < <(git rev-list --topo-order $FRONTIER)
+
+# Unreachable
+exit 1

@@ -1,0 +1,92 @@
+#!/usr/bin/perl -w
+#   Copyright 2014 Daniel Jay Haskin, 2019 The Scale Factory
+#
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Adapted from, https://raw.githubusercontent.com/djhaskin987/lukspinentry/master/lukspinentry
+
+use strict;
+use utf8;
+use FileHandle;
+use IPC::Open2;
+use Env qw( LC_CTYPE DISPLAY SSH_TTY );
+
+my $arg = shift(@ARGV);
+
+# open pinentry
+my $pid = open2(*IN, *OUT, "pinentry") || die;
+
+sub await_ok($) {
+    my $command_count = shift;
+    my $ok_count = 0;
+    while ( $ok_count < $command_count) {
+        $_ = <IN>;
+        if ( /^OK/ ) {
+            $ok_count += 1;
+            last if $ok_count >= $command_count;
+            next;
+        } elsif ( /^ERR \d+ (.*)/ ) {
+            print STDERR $1."\n";
+            exit 1;
+            last;
+        } elsif ( /^D (.*)/ ) {
+            next;
+        }
+    }
+}
+
+
+############################################################################
+sub confirm($) {
+    my $message=shift;
+    await_ok(1);
+    my $command_count = 0;
+    if ( defined($LC_CTYPE) ) {
+        print OUT "OPTION lc-ctype=$LC_CTYPE\n";
+        $command_count += 1;
+    }
+    print OUT "SETPROMPT Confirmation required\n";
+    $command_count += 1;
+    if ( defined($message) and $message ne '' ) {
+        print OUT "SETDESC ${message}\n";
+        $command_count += 1;
+    }
+    print OUT "SETTITLE Confirmation required?\n";
+    $command_count += 1;
+    print OUT "SETOK Confirm\n";
+    $command_count += 1;
+    print OUT "SETCANCEL Cancel\n";
+    $command_count += 1;
+    await_ok($command_count);
+    print OUT "CONFIRM\n";
+    while ( <IN> ) {
+        if ( /^OK/ ) {
+            return;
+        } elsif ( /^ERR \d+ (.*)/ ) {
+            print STDERR $1."\n";
+            print OUT "BYE\n";
+            exit 1;
+            last;
+        } elsif ( /^D (.*)/ ) {
+            next;
+        }
+    }
+}
+
+my $passprompt=undef;
+$passprompt=$arg if defined $arg and $arg ne '';
+
+confirm($passprompt);
+print OUT "BYE\n";
+exit(0);

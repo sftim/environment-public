@@ -1,0 +1,3 @@
+#!/bin/bash
+export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+for connection in $( nmcli -t --fields uuid,type,state connection show | grep ':vpn:activated$' | cut -d : -f 1 ); do nmcli -t connection down $connection; done | sed -e 's/ (D-Bus active path.*$//' | grep --color=auto --line-buffered -9999 deactivated

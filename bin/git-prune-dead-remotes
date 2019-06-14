@@ -1,0 +1,10 @@
+#!/bin/sh
+if [ "$1" = "" ]; then
+    printf "%s\n" "git: No remote specified" 1>&2
+    exit 1
+fi
+if git remote 2>/dev/null | grep -q "^$1\$"; then
+    printf "git: remote %s still exists\n" "$1" 1>&2
+    exit 1
+fi
+git branch -a | grep remotes/"$1" | awk '{ print $1}' | sed -e 's,remotes/,,' | xargs -r git branch -rd
