@@ -21,4 +21,7 @@ fi
 kubectl version --client > /dev/null 2>&1 && source <(kubectl completion bash)
 kubectl version > /dev/null 2>&1 && source <(kubeadm completion bash)
 
+# Skip sending SAM telemetry to AWS
+export SAM_CLI_TELEMETRY=0
+
 [ -f ~/.bash_aliases ] && source ~/.bash_aliases
