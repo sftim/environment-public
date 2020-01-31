@@ -1,6 +1,11 @@
 #!/bin/bash
 if command git rev-parse --is-inside-work-tree > /dev/null 2>&1 ; then
-  command git rev-parse --show-toplevel
+  self="$0"
+  top="$(command git rev-parse --show-toplevel)"
+  while ( cd "${top}/.." && git rev-parse --is-inside-work-tree> /dev/null 2>&1 ); do
+    top="$( cd "${top}/.." && "${self}" )"
+  done
+  printf "%s" "${top}"
 else
   printf "git: not inside a repository\n" 1>&2
   exit 1
