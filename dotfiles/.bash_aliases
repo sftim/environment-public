@@ -1,5 +1,5 @@
 #!/bin/bash
-alias repotop='/usr/bin/git rev-parse --is-inside-work-tree >/dev/null 2>&1 && pushd "$( /usr/bin/git rev-parse --show-toplevel )" > /dev/null'
+alias repotop='cd "$( git repo-top )"'
 alias now="date +%Y-%m-%dT%T.%N | sed -e 's/......\$//'"
 alias dmesg='dmesg --time-format iso'
 alias iotop='sudo -n iotop'
