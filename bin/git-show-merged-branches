@@ -1,3 +1,4 @@
 #!/bin/sh
+main_branch="${1:-main}"
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
-git branch --no-color --merged | grep -v "\*" | grep -v master | tr -d ' '
+git branch --no-color --merged "${main_branch}" | grep -v "\*" | grep -v "^. ${main_branch}" | tr -d ' '
