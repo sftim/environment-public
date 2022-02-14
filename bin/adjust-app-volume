@@ -1,0 +1,81 @@
+#!/bin/bash
+app="$1"
+delta="$2"
+
+if [ $# != 2 ]; then
+    printf "%s: Must specify app and volume change\n" "$( basename $0 )" 1>&2
+    exit 1
+fi
+
+getappmuted() {
+    return "$(
+    pacmd list-sink-inputs | \
+        gawk 'BEGIN {sinkindexid = -1; foundsink = 0; }
+             /^$/ {sinkindexid = -1; foundsink = 0; }
+             /^\s+index:\s/ {sinkindexid = $2; }
+             /^\s+client:\s/ && (sinkindexid >= 0) && ($2 == "\"'"$1"'\"" ) {foundsink = 1 }
+             /^\s+muted:\s/ && (sinkindexid >= 0) && ( $2 == "yes" ) && (foundsink == 1) { print 1 ; exit}
+             /^\s+muted:\s/ && (sinkindexid >= 0) && ( $2 == "no" ) && (foundsink == 1) { print 0 ; exit}'
+             )" || return 0 # fallback
+}
+
+getappvol() {
+    pacmd list-sink-inputs | \
+        gawk 'BEGIN {sinkindexid = -1; inproperties = 0; clientid = -1; lastlinevolume = 0; volumeline = "" }
+             /^$/ { sinkindexid = -1; inproperties = 0; clientid = -1; }
+             !/:/ && ( lastlinevolume > 0 ) { volumeline = volumeline " " $0 }
+             /:/ { lastlinevolume = 0; }
+             /^\s+index:\s/ {sinkindexid = $2; inproperties = 0;}
+             /^\s+client:\s/ && (sinkindexid > 0) {clientid = $2 }
+             /^\s+volume:/ && (sinkindexid > 0) {lastlinevolume = 1; volumeline = $0;}
+             /^\s+properties:\s*$/ && (inproperties == 0 ) && (sinkindexid > 0) {inproperties = 1 }
+             /^\s+application\.process\.binary = / && (clientid >= 0) && (inproperties > 0) && ($3 ==  "\"'"$1"'\"") { print volumeline }' | cut -d : -f 2- | tr --squeeze-repeats ' ' \\n | grep -- '%$' | tr -d % | \
+                 gawk '{ total += ($1 / 100); count++ } END { print total/count }'
+}
+
+getappsinkid() {
+    pacmd list-sink-inputs | \
+        gawk 'BEGIN {sinkindexid = -1; inproperties = 0; clientid = -1; }
+             /^$/ {sinkindexid = -1; clientid = -1; inproperties = 0; }
+             /^\s+index:\s/ {sinkindexid = $2; inproperties = 0 }
+             /^\s+client:\s/ && (sinkindexid >= 0 ) {clientid = $2 }
+             /^\s+properties:\s*$/ && (inproperties == 0 ) && (clientid >= 0) {inproperties = 1 }
+             /^\s+application\.process\.binary\s=\s/ && (clientid >= 0) && (inproperties > 0) && ($3 ==  "\"'"$1"'\"") { print sinkindexid }'
+}
+
+getappsinkname() {
+    pacmd list-sink-inputs | \
+        gawk 'BEGIN {sinkindexid = -1; inproperties = 0; }
+             /^$/ {sinkindexid = -1; inproperties = 0; }
+             /^\s+index:\s/ {sinkindexid = $2; inproperties = 0 }
+             /^\s+client:\s/ && (sinkindexid >= 0) {clientline = $0 }
+             /^\s+properties:/ && (inproperties == 0 ) && (sinkindexid >= 0) {inproperties = 1 }
+             /^\s+application\.process\.binary\s=\s/ && (sinkindexid >= 0) && (inproperties > 0) && ($3 ==  "\"'"$1"'\"") { print clientline }' | sed -e 's,^.* <,,' -e 's,>$,,'
+}
+
+if ! ( printf "%s" "$delta" | grep -qE '[+-][1-9][0-9]*%?$' ); then
+    printf "%s: Invalid volume change: %s\n" "$( basename $0 )" "$delta" 1>&2
+    exit 1
+fi
+
+if ! ( printf "%s" "$delta" | grep -qE '%$' ); then
+    delta="${delta}%"
+fi
+
+pactl set-sink-input-volume "$( getappsinkid "$app" )" "$( printf "%s" "${delta}" )"
+
+icon=audio-volume-low-symbolic
+volume="$(getappvol "${app}" )"
+if (( $(echo "${volume} > 0.35" |bc -l) )); then
+    icon=audio-volume-medium-symbolic
+fi
+if (( $(echo "${volume} > 0.65" |bc -l) )); then
+    icon=audio-volume-high-symbolic
+fi
+if (( $(echo "${volume} > 1.0" |bc -l) )); then
+    icon=audio-volume-overamplified-symbolic
+fi
+if (( $(echo "${volume} > 1.0" |bc -l) )); then
+    extratext=" ($( echo "${volume} * 100" |bc | cut -d . -f 1)%)"
+fi
+gdbus call --session --dest 'org.gnome.Shell' --object-path '/org/gnome/Shell' --method 'org.gnome.Shell.ShowOSD' "{'icon': <'${icon}'>, 'label': <'$(getappsinkname "${app}" ) volume${extratext}'>, 'level': <${volume}>}" > /dev/null
