@@ -1,0 +1,16 @@
+#!/bin/bash
+if ! wmctrl -m 1>/dev/null ; then
+    printf "Cannot find wmctrl\n" 1>&2
+    exit 1
+fi
+if [ "$( wmctrl -l | grep -c SimpleScreenRecorder )" == 0 ]; then
+    gtk-launch simplescreenrecorder
+    sleep 0.75
+fi
+window_id="$( wmctrl -l | awk '$4 == "SimpleScreenRecorder" { print $1 }' | head -n 1)"
+if [ "${window_id}" = "" ]; then
+    printf "Cannot find SimpleScreenRecorder window\n" 1>&2
+    exit 1
+fi
+printf "Switching focus to window %s\n" "${window_id}"
+wmctrl -R "${window_id}"

@@ -1,0 +1,23 @@
+#!/bin/bash
+if ps x -o cmd | grep -v grep | grep -q /zoom; then
+    zoom_workspaces="$( for id in $( xdotool search --class zoom ); do xprop -id "${id}" _NET_WM_DESKTOP 2>/dev/null | awk '/ = / { print $3 }'; done | sort -nu )"
+    if [ "${zoom_workspaces}" != '' ] && [ "$( printf "%s\n" "${zoom_workspaces}" | wc -l )" = 1 ]; then
+        switch-to-workspace "$(( 1 + $( printf "%d\n" "${zoom_workspaces}" | head -n 1 ) ))"
+        zoom_window_ids="$( for zoom_window_id in $( xdotool search --class zoom ); do
+            candidate_leader_id="$( xprop -id "${zoom_window_id}" WM_CLIENT_LEADER | awk '{ print $5 }' )"
+            if [ "${candidate_leader_id}" != '' ] && [ "${candidate_leader_id}" = "$( xprop -id "${candidate_leader_id}" WM_CLIENT_LEADER | awk '{ print $5 }' )" ]; then
+                printf "%s\n" "${zoom_window_id}"
+            fi
+        done < /dev/null)"
+        if [ "${zoom_window_ids}" != '' ] && [ "$( printf "%s" "${zoom_window_ids}" | wc -l )" = 1 ]; then
+            xdotool windowactivate "$( printf "%s\n" "${zoom_window_ids}" | head -n 1 )" 1>&2
+        else
+            printf "Saw more than one Zoom window. Not activating.\n" 1>&2
+            exit 1
+        fi
+    fi
+else
+    switch-to-workspace 2
+    sleep 0.25
+    setsid systemd-run --scope --description=Zoom --nice=2 --user --no-block -- zoom </dev/null >/dev/null 2>&1 &
+fi

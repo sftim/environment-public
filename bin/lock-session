@@ -1,0 +1,4 @@
+#!/bin/sh
+loginctl list-sessions | tail -n +2 | head -n -2 | awk '$3 = "tim" { print $1}' | while read sessionid; do
+    loginctl lock-session "${sessionid}";
+done

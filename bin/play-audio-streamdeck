@@ -1,0 +1,2 @@
+#!/bin/sh
+exec paplay --stream-name=streamdeck ~/Audio/"$1"

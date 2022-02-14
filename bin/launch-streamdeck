@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+systemctl --user stop streamdeck.scope 1>&2 || true
+sleep 0.25
+systemd-run --description="Streamdeck tool" --unit="streamdeck" --scope --user -E WAYLAND_DISPLAY="${WAYLAND_DISPLAY}" -E DISPLAY="${DISPLAY}" -E DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS}" -E USER="${USER}" ~/.local/bin/streamdeck 1>/dev/null &
+sleep 0.25

@@ -1,0 +1,43 @@
+#!/bin/bash
+
+if [ $# = 0 ]; then
+    printf "Usage: %s slide-number\n" "$( basename $0 )" 1>&2
+    exit 1
+fi
+chromium_presentation_window_ids="$( comm -1 -2 <( xdotool search --classname Chromium | sort -n ) <(  xdotool search --name '^Presenter View - .* - Google Slides - Chromium' | sort -n ) )"
+
+if [ "${chromium_presentation_window_ids}" != '' ] && [ "$( printf "%s" "${chromium_presentation_window_ids}\n" | wc -l )" = 0 ]; then
+    case "$1" in
+    next-slide)
+        xdotool --window "${chromium_presentation_window_ids}" key Right || exit 1
+        exit $?
+        ;;
+    previous-slide)
+        xdotool --window "${chromium_presentation_window_ids}" key Left || exit 1
+        exit $?
+        ;;
+    esac
+
+    number_match='^[1-9][0-9]*$'
+    if ! [[ $1 =~ $number_match ]] ; then
+        printf "%s: Not a number (\"%d\")\n" "$( basename $0 )" "$1" 1>&2
+        exit 1
+    fi
+
+    declare -a numbers
+    input="$1"
+    for index in $(seq 0 $(( ${#input} - 1)))
+       do numbers[$index]=${input:$index:1}
+    done
+    xdotool windowfocus "${chromium_presentation_window_ids}" || exit 1
+    xdotool keydown "x" # Forget entered numbers
+    xdotool keyup "x"
+    for digit in "${numbers[@]}"
+    do
+        xdotool keydown "$digit"
+        xdotool keyup "$digit"
+        sleep 0.1
+    done
+    xdotool keydown KP_Enter
+    xdotool keyup KP_Enter
+fi

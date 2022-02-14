@@ -1,0 +1,10 @@
+#!/bin/sh
+if [ $# != 1 ]; then
+    printf "Usage: %s workspace\n" "$( basename $0 2>/dev/null )" 1>&2
+    exit 1
+fi
+if ! printf variant:int32:%d "$1" >/dev/null 2>&1; then
+    printf "Invalid workspace number: %s\n" "$1" 1>&2
+    exit 1
+fi
+exec dbus-send --session --print-reply --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:"global.workspace_manager.get_workspace_by_index($(( $1 - 1 ))).activate(global.get_current_time());" | grep -q 'boolean true$'

@@ -1,0 +1,5 @@
+#!/bin/sh
+if ! ( ps x -o cmd | grep -v grep | grep -q /keepassxc/ ); then
+    switch-to-workspace 2
+fi
+exec dbus-send --print-reply --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:'const { Shell } = imports.gi; Shell.AppSystem.get_default().lookup_app("keepassxc_keepassxc.desktop").activate_full(-1, global.get_current_time())'

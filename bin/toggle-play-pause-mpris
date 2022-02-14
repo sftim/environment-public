@@ -1,0 +1,7 @@
+#!/bin/bash
+# lock self
+[  "${FLOCKER}"  != "$0" ] && exec env FLOCKER="$0" flock -en "$0" "$0" "$@" || :
+
+playerctl play-pause
+
+exec sleep 0.5

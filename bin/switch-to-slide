@@ -1,0 +1,16 @@
+#!/bin/bash
+
+if [ $# = 0 ]; then
+    printf "Usage: %s command\n" "$( basename $0 )" 1>&2
+    exit 1
+fi
+
+chromium_presentation_window_ids="$( comm -1 -2 <( xdotool search --classname Chromium | sort -n ) <(  xdotool search --name '^Presenter View - .* - Google Slides - Chromium' | sort -n ) )"
+
+if [ "${chromium_presentation_window_ids}" != '' ] && [ "$( printf "%s" "${chromium_presentation_window_ids}\n" | wc -l )" = 0 ]; then
+    exec switch-to-slide-chromium "$@"
+else
+    if dbus-send --session --print-reply --dest=io.github.pdfpc /io/github/pdfpc org.freedesktop.DBus.Properties.Get string:io.github.pdfpc string:NumberOfSlides > /dev/null 2>&1; then
+        switch-to-slide-pdfpc "$1"
+    fi
+fi

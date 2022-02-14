@@ -1,0 +1,34 @@
+#!/bin/bash
+# lock self
+[  "${FLOCKER}"  != "$0" ] && exec env FLOCKER="$0" flock -en "$0" "$0" "$@" || :
+
+zoom_window_id="$( comm -1 -2 <( xdotool search --classname zoom | sort -n ) <( xdotool search --name 'zoom_linux_float_video_window' | sort -n ) )"
+if [ "${zoom_window_id}" = '' ]; then
+    zoom_window_id="$( comm -1 -2 <( xdotool search --classname zoom | sort -n ) <( ( xdotool search --name '^Zoom Meeting$' ; xdotool search --name '^Zoom Webinar$'; xdotool search --name '^Zoom Meeting \(Locked\)$'; xdotool search --name '^Zoom - Breakout Room'; ) | sort -n ) )"
+fi
+
+# Check result count. If multiple, only count fullscreen windows.
+if ! printf "%s\n" "${zoom_window_id}" | wc -l | grep -q '^1$' && [ "${zoom_window_id}" != '' ]; then
+    zoom_window_list_new="$( for id in ${zoom_window_id}
+    do
+        xprop -id "${id}" _NET_WM_STATE 2>/dev/null | grep -qE ' = ' && printf "%s\n" "${id}"
+    done )"
+    if printf "%s\n" "${zoom_window_list_new}" | wc -l | grep -q '^1$'; then
+        zoom_window_id="${zoom_window_list_new}"
+    else
+        printf "Found multiple Zoom windows: %s" "$( printf "%s" "${zoom_window_list_new}" | tr \\n , )" 1>&2
+        exit 1
+    fi
+fi
+zoom_window_id="$( printf "%s\n" "${zoom_window_id}" | head -n 1 | tr -d \\n )"
+printf "Found Zoom window %s\n" "${zoom_window_id}"  1>&2
+if printf "%s\n" "${zoom_window_id}" | wc -l | grep -q '^1$' && [ "${zoom_window_id}" != '' ]; then
+    xdotool windowfocus "${zoom_window_id}"
+    xdotool keydown Alt
+    xdotool keydown a
+    sleep 0.1
+    xdotool keyup a
+    xdotool keyup Alt
+fi
+
+sleep 0.05

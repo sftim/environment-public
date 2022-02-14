@@ -1,0 +1,56 @@
+#!/bin/bash
+getbluetoothsinkcardprofile() {
+    cardname="$( printf %s "$1" | tr -d \\n )"
+    pacmd list-cards | \
+        gawk '/^\s+index: /{incard = 1; inprofiles = 0; seenname = 0 }
+             /^\s+name: / && $2 == "<'"$cardname"'>" { seenname = 1 }
+             /^\s+active profile: / && incard && seenname {inprofiles = 0; print $3}' |\
+        tr -d "<>"
+}
+getbluetoothsinkcardname() {
+    pacmd list-sinks | \
+        gawk '/^\s+index: /{insink = 1; inproperties = 0; seencardname = 0}
+             /^\s+\* index: /{insink = 1; inproperties = 0; seencardname = 0}
+             /^\s+card: / && insink {cardname=$3; seencardname = 1}
+             /^\s+properties: / && insink && (!inproperties) {inproperties = 1}
+             /\s+bluetooth\./ && insink && seencardname { print cardname }' |\
+        tr -d "<>"
+}
+
+setactiveprofile() {
+    pacmd set-card-profile "$(getbluetoothsinkcardname)" "$1"
+    [ "$(getbluetoothsinkcardprofile)" = "$1" ]
+}
+
+notify() {
+    local label
+    case "$1" in
+        headset_head_unit)
+            label="Headset / hands free"
+            icon=audio-headset-symbolic
+            ;;
+        a2dp_*)
+            label="A2DP"
+            icon=audio-headphones-symbolic
+            ;;
+        *)
+            label="$1"
+            icon=audio-headphones-symbolic
+            ;;
+    esac
+    gdbus call --session --dest 'org.gnome.Shell' --object-path '/org/gnome/Shell' --method 'org.gnome.Shell.ShowOSD' "{'icon': <'${icon}'>, 'label': <'${label}'>}" > /dev/null
+}
+
+if [ $# != 1 ] || [ "$1" = "" ]; then
+    printf "%s: Invalid profile specified\n" "$( basename $0 )" 1>&2
+    exit 1
+fi
+
+old="$(getbluetoothsinkcardprofile "$( getbluetoothsinkcardname )")"
+setactiveprofile "$1"
+status=$?
+new="$(getbluetoothsinkcardprofile "$( getbluetoothsinkcardname )")"
+if [ "$old" != "$new" ] ; then
+    notify "$new"
+fi
+exit $status

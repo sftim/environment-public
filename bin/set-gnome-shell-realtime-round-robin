@@ -1,0 +1,4 @@
+#!/bin/sh
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+PRIORITY=5
+exec pkexec chrt --reset-on-fork --rr -p $PRIORITY "$( systemctl --user show --property MainPID --value gnome-shell-wayland.service )"

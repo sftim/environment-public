@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# This also works well as a bash alias
+sleepuntil ()
+{
+    local started_at="$(date +%s )";
+    local target=0;
+    date -d "$1" +%s > /dev/null || return 1;
+    target="$(date -d "$1" +%s)";
+    if [[ $target < $started_at ]]; then
+        date -d "$1 tomorrow" +%s > /dev/null || return 1;
+        target="$(date -d "$1 tomorrow" +%s)";
+    fi;
+    while [ "$( date +%s)" -lt "${target}" ]; do
+        sleep 0.75;
+    done
+}
+
+sleepuntil "$@"

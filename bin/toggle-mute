@@ -1,0 +1,14 @@
+#!/bin/sh
+# synthesise a press of the mute button
+
+set -e
+# become root if needed (but never prompt for credentials)
+# do not run from home directory! Place this in /usr/local/bin and authorise THAT path in sudoers
+[ "$( id -u )" = 0 ] || exec sudo -n "$0"
+
+INPUT_DEVICE=platform-i8042-serio-0
+
+# key down: mute
+evemu-event "/dev/input/by-path/$INPUT_DEVICE-event-kbd" --type EV_KEY --code KEY_MUTE --value 1 --sync
+# key up: mute
+evemu-event "/dev/input/by-path/$INPUT_DEVICE-event-kbd" --type EV_KEY --code KEY_MUTE --value 0
