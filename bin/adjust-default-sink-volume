@@ -1,0 +1,66 @@
+#!/bin/bash
+if [ $# != 1 ]; then
+    printf "%s: No volume change specified\n" "$( basename $0 )" 1>&2
+    exit 1
+fi
+if ! ( printf "%s" "$1" | grep -qE '[+-][1-9][0-9]*%?$' ); then
+    printf "%s: Invalid volume change: %s\n" "$( basename $0 )" "$1" 1>&2
+    exit 1
+fi
+
+set -e
+
+change="$1"
+if ! ( printf "%s" "$1" | grep -qE '%$' ); then
+    change="${change}%"
+fi
+
+if pactl --format json info | jq -r .default_sink_name > /dev/null 2>&1; then
+  default_sink_name="$( pactl --format json info | jq -r .default_sink_name )"
+fi
+
+pactl set-sink-volume @DEFAULT_SINK@ "$( printf "%s" "${change}" )"
+
+if [ "$default_sink_name" = "" ]; then
+  exit 0
+fi
+
+volume_lines="$( pactl --format json list sinks | jq -r '.[] | select(.name=="'"${default_sink_name}"'") | .volume | keys[] as $k | [(.[$k] .value_percent)] | .[]' | tr -d % )"
+
+linecount="$( printf "%s\n" "$volume_lines" | wc -l )"
+if [ "$linecount" -gt 0 ]; then
+  volume="$( printf "%s\n" "$volume_lines" | awk '{s+=$1} END {print (s / '"$linecount"') / 100}' )"
+else
+  exit 0
+fi
+
+icon=audio-volume-low-symbolic
+extratext=""
+if (( $(echo "${volume} > 0.35" |bc -l) )); then
+    icon=audio-volume-medium-symbolic
+fi
+if (( $(echo "${volume} > 0.65" |bc -l) )); then
+    icon=audio-volume-high-symbolic
+fi
+if (( $(echo "${volume} > 1.0" |bc -l) )); then
+    icon=audio-volume-overamplified-symbolic
+fi
+pactl --format json list sinks | jq -r '.[] | select(.name=="'"${default_sink_name}"'") | .properties | ."device.description"' | sed -e 's/ by Shokz//' 1>&2
+percentage="$( echo "${volume} * 100" |bc | cut -d . -f 1)%"
+
+active_port="$( pactl --format json list sinks | jq -r '.[] | select(.name=="'"${default_sink_name}"'") | .active_port' )"
+port_name="$( pactl --format json list sinks | jq -r '.[] | select(.name=="'"${default_sink_name}"'") | .ports[] |select(.name=="'"${active_port}"'")|.description' )"
+label="$( pactl --format json list sinks | jq -r '.[] | select(.name=="'"${default_sink_name}"'") | .properties | ."device.description"' | sed -e 's/ by Shokz//' | tr -d \\n )"
+
+if printf "%s" "${port_name}" | grep -q '^HDMI '; then
+  port_name="PC monitor"
+fi
+
+if [ "$( printf "%s" "${label}" | wc -c )" -lt 20 ]; then
+  label="$( printf "%s (%q)\n" "${label}" "${port_name}" )"
+fi
+if [ "$( printf "%s" "${label}" | wc -c )" -gt 50 ]; then
+  label="${port_name}"
+fi
+
+notify-send.py "${port_name} volume" "Volume for ${label} now ${percentage}" --hint "string:image-path:${icon}" --expire-time 2500 --replaces-process volume-notification-default-sink &
