@@ -1,9 +1,9 @@
-#!/bin/bash
+#!/bin/sh
 if command git rev-parse --is-inside-work-tree > /dev/null 2>&1 ; then
   self="$0"
   top="$(command git rev-parse --show-toplevel)"
   while ( cd "${top}/.." && git rev-parse --is-inside-work-tree> /dev/null 2>&1 ); do
-    top="$( cd "${top}/.." && "${self}" )"
+    top="$( cd "${top}/.." && exec "${self}" )"
   done
   printf "%s" "${top}"
 else
