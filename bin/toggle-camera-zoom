@@ -24,6 +24,7 @@ zoom_window_id="$( printf "%s\n" "${zoom_window_id}" | head -n 1 | tr -d \\n )"
 printf "Found Zoom window %s\n" "${zoom_window_id}"  1>&2
 if printf "%s\n" "${zoom_window_id}" | wc -l | grep -q '^1$' && [ "${zoom_window_id}" != '' ]; then
     xdotool windowfocus "${zoom_window_id}"
+    sleep 0.1
     xdotool keydown Alt
     xdotool keydown v
     sleep 0.1
@@ -31,4 +32,4 @@ if printf "%s\n" "${zoom_window_id}" | wc -l | grep -q '^1$' && [ "${zoom_window
     xdotool keyup Alt
 fi
 
-sleep 0.25
+sleep 0.05
