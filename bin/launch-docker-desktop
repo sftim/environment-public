@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /bin/systemctl --user start docker-desktop.service

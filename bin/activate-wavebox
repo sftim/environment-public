@@ -1,0 +1,3 @@
+#!/bin/sh
+switch-to-workspace 4
+exec wavebox

@@ -1,2 +1,2 @@
 #!/bin/sh
-gio launch /var/lib/snapd/desktop/applications/slack_slack.desktop
+( cd "$( realpath ~/snap/slack/current )"/.config/autostart && gio launch slack.desktop )

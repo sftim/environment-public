@@ -1,12 +1,6 @@
 #!/bin/bash
 if ps x -o cmd | grep -v grep | grep -q /firefox; then
-    firefox_window_ids="$( for id in $( xdotool search --class Firefox ); do xprop -id "${id}" WM_WINDOW_ROLE | grep -q '"browser"$' && printf "%s\n" "${id}"; done )"
-    if [ "${firefox_window_ids}" != '' ] && [ "$( printf "%s\n" "${firefox_window_ids}" | wc -l )" = 1 ]; then
-        exec xdotool windowactivate "$( printf "%s\n" "${firefox_window_ids}" | head -n 1 )"
-    else
-        printf "Saw more than one Firefox window. Not activating.\n" 1>&2
-        exit 1
-    fi
+      exec gdbus call --session     --dest org.gnome.Shell     --object-path /de/lucaswerkmeister/ActivateWindowByTitle     --method de.lucaswerkmeister.ActivateWindowByTitle.activateByWmClass     'firefox'
 else
     switch-to-workspace 3
     sleep 0.25

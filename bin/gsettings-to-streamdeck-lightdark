@@ -1,0 +1,32 @@
+#!/bin/sh
+
+# No diagnostics please we're running this quite often
+exec 1>/dev/null
+exec 2>/dev/null
+
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export PATH="$PATH:$( eval echo ~$( id -nu ))/.local/bin"
+
+wrapper=""
+
+if [ "$DBUS_SESSION_BUS_ADDRESS" = "" ]; then
+  wrapper=dbus-launch
+fi
+
+scheme="$( gsettings get org.gnome.desktop.interface color-scheme | tr -d \' )"
+
+case "$scheme" in
+
+  prefer-dark)
+    $wrapper streamdeckc --text --page=0 --button=11 --action=SET_STATE --state=1
+    ;;
+
+  default|prefer-light)
+    $wrapper streamdeckc --text --page=0 --button=11 --action=SET_STATE --state=0
+    ;;
+
+  *)
+    # error
+    streamdeckc --text --page=0 --button=11 --action=SET_STATE --state=2
+    ;;
+esac
