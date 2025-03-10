@@ -1,0 +1,6 @@
+#!/bin/sh
+# lock self
+[  "${FLOCKER}"  != "$0" ] && exec env FLOCKER="$0" flock -en "$0" "$0" "$@" || :
+
+sleep 2.5
+streamdeckc --text --page=2 --button=8 --action=SET_STATE --state=0
